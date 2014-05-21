@@ -26,6 +26,7 @@ def run(self, series=False):
     # Start the run script
     script = '''#!/bin/bash
 #PBS -l walltime={0}
+#PBS -A mat045
 #PBS -j oe
 #PBS -N {1}
 '''.format(self.run_params['walltime'], self.run_params['jobname'])
