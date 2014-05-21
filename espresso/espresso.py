@@ -37,7 +37,7 @@ system_keys = ['ibrav', 'celldm', 'A', 'B', 'C' 'cosAB', 'cosAC', 'cosBC',
                'nat', 'ntyp', 'nbnd', 'tot_charge', 'tot_magnetization',
                'starting_magnetization', 'ecutwfc', 'ecutrho', 'ecutfock',
                'nr1', 'nr2', 'nr3', 'nr1s', 'nr2s', 'nr3s', 'nosym',
-               'nosym_evc', 'noinv', 'no_t_rev', 'force_symmorphic', 
+               'nosym_evc', 'noinv', 'no_t_rev', 'force_symmorphic',
                'use_all_frac', 'occupations', 'one_atom_occupations',
                'starting_spin_angle', 'degauss', 'smearing', 'nspin',
                'noncolin', 'ecfixed', 'qcutz', 'q2sigma', 'input_dft',
@@ -88,10 +88,10 @@ string_keys = ['calculation', 'title', 'verbosity', 'restart_mode', 'outdir',
                'mixing_mode', 'diagonalization', 'startingpot', 'startingwfc',
                'ion_dynamics', 'ion_positions', 'phase_space', 'pot_extrapolation',
                'wfc_extrapolation', 'ion_temperature', 'cell_dynamics', 'cell_dofree']
-               
+
 
 list_keys = ['celldm', 'starting_magnetization', 'Hubbard_U', 'Hubbard_alpha',
-             'Hubbard_J', 'starting_ns_eigenvalue', 'angle1', 'angle2', 
+             'Hubbard_J', 'starting_ns_eigenvalue', 'angle1', 'angle2',
              'fixed_magnetization', 'efield_cart']
 
 bool_keys = ['wf_collect', 'tstress', 'tprnfor', 'lkpoint_dir', 'tefield',
@@ -107,18 +107,18 @@ int_keys = ['nstep', 'iprint', 'nberrycyc', 'gdir', 'nppstr', 'ibrav', 'nat',
             'lda_plus_u_kind', 'edir', 'report', 'esm_nfit', 'electron_maxstep',
             'mixing_ndim', 'mixing_fixed_ns', 'ortho_para', 'diago_cg_maxiter',
             'diago_david_ndim', 'nraise', 'bfgs_ndim']
-        
+
 class Espresso(Calculator):
     '''This is an ase.calculator class that allows the use of quantum-espresso
     through ase.'''
-    
+
     # Load the list of pseudo potentials from the ESPRESSO_PPs variable
     # found in the espresso_PPs.py file
 
     PPs = ESPRESSO_PPs
-    
+
     def __init__(self, espressodir=None, **kwargs):
-        
+
         if espressodir == None:
             self.espressodir = os.getcwd()
         else:
@@ -154,12 +154,12 @@ class Espresso(Calculator):
         os.chdir(self.cwd)
 
         return
-        
-    def initialize(self, atoms=None, **kwargs):        
+
+    def initialize(self, atoms=None, **kwargs):
         '''We need an extra initialize since a lot of the things we need to do
         can only be done once we're inside the directory, which happens after
         the initial __init__'''
-        
+
         # At this point, we want to determine the state of the directory to
         # decide whether we need to start fresh, restart, or read the data
 
@@ -167,7 +167,7 @@ class Espresso(Calculator):
         self.original_atoms = atoms
         self.old_filename = os.path.basename(self.espressodir) # For old version of espresso that used this filename
         self.filename = 'pwscf'
-        self.name = 'QuantumEspresso'        
+        self.name = 'QuantumEspresso'
         self.real_params = {}
         self.string_params = {}
         self.int_params = {}
@@ -185,8 +185,8 @@ class Espresso(Calculator):
             self.list_params[key] = None
 
         # Set default K_POINTS card
-        self.input_params = {'kpts': (1, 1, 1),
-                             'offset': False}                                     
+        self.input_params = {'kpts': 'gamma',
+                             'offset': False}
 
         # Set default run commands
         self.run_params = {'executable': ESPRESSORC['executable'],
@@ -204,8 +204,8 @@ class Espresso(Calculator):
         # Define a default folder for where the pseudopotentials are held
         if self.string_params['pseudo_dir'] == None:
             PPpath = ESPRESSORC['PPpath']
-            self.string_params['pseudo_dir'] = PPpath        
-            
+            self.string_params['pseudo_dir'] = PPpath
+
         # If it is a clean folder
         if (not os.path.exists(self.old_filename + '.in')
             and not os.path.exists(self.filename + '.in')):
@@ -223,7 +223,7 @@ class Espresso(Calculator):
             self.espresso_running = False
             self.converged = False
             self.status = 'empty'
-            
+
         # If it is queued or running
         elif (os.path.exists('jobid')
               and self.job_in_queue()):
@@ -231,7 +231,7 @@ class Espresso(Calculator):
             try: # We need a try statement because it might be queued
                 self.read_output()
             except:
-                pass 
+                pass
             self.espresso_running = True
             self.status = 'running'
             self.converged = False
@@ -243,7 +243,7 @@ class Espresso(Calculator):
             self.status = 'empty'
             self.converged = False
             self.read_input()
-            
+
         # If job is done and this is our first time looking at it
         elif (os.path.exists('jobid')
               and not self.job_in_queue()):
@@ -273,7 +273,7 @@ class Espresso(Calculator):
 
         if self.atoms == None:
             raise KeyError('No atoms object specified')
-            
+
         # Store the old parameters read from files for restart purposes
         self.old_real_params = self.real_params.copy()
         self.old_string_params = self.string_params.copy()
@@ -281,16 +281,16 @@ class Espresso(Calculator):
         self.old_bool_params = self.bool_params.copy()
         self.old_list_params = self.list_params.copy()
         self.old_input_params = self.input_params.copy()
-        
+
         # Finally set all the keys
         self.set(**kwargs)
-        
+
         self.initialize_atoms()
 
         # Read the atoms object and define nat and ntyp tags
         self.int_params['nat'] = len(self.atoms)
         self.int_params['ntyp'] = len(self.unique_set)
-        self.int_params['ibrav'] = 0 
+        self.int_params['ibrav'] = 0
         if atoms is not None and self.status == 'empty':
             atoms.calc = self
         elif atoms is not None and self.status in ('running', 'done'):
@@ -305,14 +305,14 @@ class Espresso(Calculator):
         self.old_int_params['nbnd'] = int(nbands * 1.5) # This is to make this backwards compatitble
 
         # For working on the niflheim cluster where large files should be stored
-        # somewhere else. 
+        # somewhere else.
         if self.string_params['wfcdir'] == True:
             self.wfcdir = os.path.abspath(self.espressodir).replace('camp', 'niflheim2')
             if not os.path.isdir(self.wfcdir):
                 os.makedirs(self.wfcdir)
             self.string_params['wfcdir'] = self.wfcdir
 
-        return        
+        return
 
     def set(self, **kwargs):
         for key in kwargs:
@@ -358,15 +358,15 @@ class Espresso(Calculator):
             else:
                 return False
 
-              
+
     def initialize_atoms(self, tags=None):
         """The purpose of this function is to find how many 'unique' atoms
-        objects there are. Atoms are unique if they have a unique combination of 
+        objects there are. Atoms are unique if they have a unique combination of
         - symbols
         - initial magnetic moments
         - Hubbard U
         - Hubbard alpha
-        
+
         The Hubbard U and Hubbard alpha, when entered into the Espresso.calc
         as a keyword, must either be None or the same length as the atoms object.
         The keywords are then converted into shortened lists depending on how unique
@@ -376,9 +376,9 @@ class Espresso(Calculator):
         self.new_symbols (for writing in the ATOMIC_POSITIONS card)
         self.atomic_species (for writing in the ATOMIC_SPECIES card)
         """
-        
+
         # Collect the data into lists that can be made unique
-        magmoms = self.atoms.get_initial_magnetic_moments()        
+        magmoms = self.atoms.get_initial_magnetic_moments()
         symbols = self.atoms.get_chemical_symbols()
         if tags == None:
             tags = np.zeros(len(symbols))
@@ -392,7 +392,7 @@ class Espresso(Calculator):
             self.list_params['Hubbard_alpha'] = Hubbard_alpha
         else:
             Hubbard_alpha = self.list_params['Hubbard_alpha']
-            
+
         def orderedset(seq, idfun=None):
             if idfun is None:
                 def idfun(x): return x
@@ -408,16 +408,16 @@ class Espresso(Calculator):
         # Make a unique set and make new variables
         self.unique_set = orderedset(zip(symbols, magmoms, Hubbard_Us, Hubbard_alpha, tags))
         unique_syms, unique_mags, unique_Us, unique_alphas, unique_tags = zip(*self.unique_set)
-        
+
         # Write a new list of symbols that will be formated [atomic symbol][index]
-        # where the index is the index of the unique atom in the unique_set. This 
+        # where the index is the index of the unique atom in the unique_set. This
         # is the order of atoms that will get written out to the ATOMIC_POSITIONS
         self.new_symbols = []
         for atom in zip(symbols, magmoms, Hubbard_Us, Hubbard_alpha, tags):
             for itype, unique_atom in enumerate(self.unique_set):
                 if atom == unique_atom:
                     self.new_symbols.append('{0}{1:d}'.format(unique_atom[0], itype))
-        
+
         # Store each unique atomic species as ([atomic symbol], [index], [PP])
         # for the ATOMIC_SPECIES card
         self.atomic_species = []
@@ -441,7 +441,7 @@ class Espresso(Calculator):
 
         import shutil
         import fnmatch
-        
+
         if not os.path.isdir(newdirpath):
             os.makedirs(newdirpath)
 
@@ -466,14 +466,14 @@ class Espresso(Calculator):
             # elif (not os.path.exists(os.path.join(newdirpath, ef))
             #       and fnmatch.fnmatch(ef, self.filename + '*')):
             #     shutil.copy(ef, newdirpath)
-        
+
     def calculation_required(self, atoms=None, property=None, force=False):
         if (self.converged == False):
             return True
 
         if force == False:
             return False
-            
+
         if self.real_params != self.old_real_params:
             return True
         elif self.string_params != self.old_string_params:
@@ -486,7 +486,7 @@ class Espresso(Calculator):
         for key in self.list_params:
             if self.list_params[key] is None and self.old_list_params[key] is None:
                 continue
-            if key == 'starting_ns_eigenvalue':                
+            if key == 'starting_ns_eigenvalue':
                 for eigen, eigen_old in zip(self.list_params[key],
                                             self.old_list_params[key]):
                     eigen = map(float, eigen)
@@ -494,7 +494,7 @@ class Espresso(Calculator):
                     if (np.around(eigen, decimals=3) !=
                         np.around(eigen_old, decimals=3)).all():
                         return True
-                        
+
             elif (np.around(np.array(self.list_params[key]), decimals=3) !=
                   np.around(np.array(self.old_list_params[key]), decimals=3)).all():
                 # print self.list_params[key], self.old_list_params[key]
@@ -512,17 +512,17 @@ class Espresso(Calculator):
                     return True
             else:
                 continue
-                
+
         return False
-        
+
     def update(self, force=False):
         self.calculate(force=force)
         return
-        
+
     def calculate(self, force=False):
         """Generate necessary files in working directory and run QuantumEspresso
-        
-        The method first writes a [name].in file. Then it 
+
+        The method first writes a [name].in file. Then it
         """
         if self.status == 'running':
             raise EspressoRunning('Running', os.getcwd())
@@ -548,9 +548,9 @@ class Espresso(Calculator):
         self.list_params['starting_magnetization'] = unique_mags
         self.list_params['Hubbard_U'] = unique_Us
         self.list_params['Hubbard_alpha'] = unique_alphas
-        
+
         # Write the NAMELISTS
-        namelists = ('CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL')        
+        namelists = ('CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL')
         for namelist in namelists:
             in_file.write('&{0}\n'.format(namelist))
             for key in eval('{0}_keys'.format(namelist.lower())):
@@ -579,15 +579,18 @@ class Espresso(Calculator):
             in_file.write('/\n')
 
         # Write the KPOINTS card
-        in_file.write('K_POINTS {automatic}\n')
-        in_file.write(' {0:d} {1:d} {2:d} '.format(self.input_params['kpts'][0],
-                                                   self.input_params['kpts'][1],
-                                                   self.input_params['kpts'][2]))
-        if self.input_params['offset'] == True:
-            in_file.write('1 1 1\n')
+        if self.input_params['kpts'] == 'gamma':
+            in_file.write('K_POINTS gamma\n')
         else:
-            in_file.write('0 0 0\n')            
-        
+            in_file.write('K_POINTS {automatic}\n')
+            in_file.write(' {0:d} {1:d} {2:d} '.format(self.input_params['kpts'][0],
+                                                       self.input_params['kpts'][1],
+                                                       self.input_params['kpts'][2]))
+            if self.input_params['offset'] == True:
+                in_file.write('1 1 1\n')
+            else:
+                in_file.write('0 0 0\n')
+
         # Write the ATOMIC_SPECIES card
         in_file.write('ATOMIC_SPECIES\n')
         for species in self.atomic_species:
@@ -611,7 +614,7 @@ class Espresso(Calculator):
             positions = self.atoms.get_scaled_positions()
         in_file.write('ATOMIC_POSITIONS {crystal}\n')
         for iatom, pos in enumerate(zip(self.new_symbols, positions)):
-            in_file.write(' {0} {1:1.5f} {2:1.5f} {3:1.5f}'.format(pos[0], pos[1][0], 
+            in_file.write(' {0} {1:1.5f} {2:1.5f} {3:1.5f}'.format(pos[0], pos[1][0],
                                                                    pos[1][1], pos[1][2]))
             if self.atoms.constraints:
                 for flag in sflags[iatom]:
@@ -621,7 +624,7 @@ class Espresso(Calculator):
                         s = 1
                     in_file.write(' {0:d}'.format(s))
             in_file.write('\n')
-            
+
         # Write the CELL_PARAMETERS
         in_file.write('CELL_PARAMETERS {angstrom}\n')
         for vec in self.atoms.cell:
@@ -632,18 +635,18 @@ class Espresso(Calculator):
         self.list_params['starting_magnetization'] = old_starting_magnetization
         self.list_params['Hubbard_U'] = old_Hubbard_U
         self.list_params['Hubbard_alpha'] = old_Hubbard_alpha
-        
+
         return
 
     def write_dos_input(self):
         """Writes the input file for the dos calculation."""
 
         in_file = open(self.filename + '.dos.in', 'w')
-        
+
         in_file.write('&PROJWFC\n')
         in_file.write('/\n')
         in_file.close()
-        
+
         return
 
     def read_initial_atoms(self):
@@ -653,7 +656,7 @@ class Espresso(Calculator):
 
         # First read the data. Note this only works when the ATOMIC_SPECIES card is
         # BEFORE the ATOMIC_POSITIONS card
-              
+
         try:
             infile = open(self.filename + '.in', 'r')
         except:
@@ -711,7 +714,7 @@ class Espresso(Calculator):
             c = []
             for i, constraint in enumerate(constraints):
                 c.append(FixScaled(cell=atoms.cell, a=i, mask=constraint))
-            atoms.set_constraint(c)            
+            atoms.set_constraint(c)
         self.atoms = atoms
         self.initial_atoms = atoms.copy()
         return unique_syms
@@ -720,7 +723,7 @@ class Espresso(Calculator):
         '''Method that imports settings from the input file'''
         # First read the atoms
         unique_syms = self.read_initial_atoms()
-                   
+
         try:
             infile = open(self.filename + '.in', 'r')
         except:
@@ -730,7 +733,7 @@ class Espresso(Calculator):
             line = line.strip()
             # Skip certain lines
             if len(line) == 0:
-                continue        
+                continue
             elif line[0] in ('&', '/'):
                 continue
             # Add a space before and after the = to ensure name and value are sep
@@ -764,13 +767,15 @@ class Espresso(Calculator):
                                                                   data[-1]])
 
             # Now read the KPOINTS card into the input_params
-            elif line.lower().startswith('k_points'):
+            elif line.lower().startswith('k_points gamma'):
+                self.input_params['kpts'] = 'gamma'
+            elif line.lower().startswith('k_points {'):
                 self.input_params['kpts'] = np.array([int(lines[i + 1].split()[j]) for j in range(3)])
                 if int(lines[i + 1].split()[3]) == 0:
                     self.input_params['offset'] == False
                 else:
                     self.input_params['offset'] == True
-                
+
         # Now we want to create the 'unique_set'. We want to do this for comparitive purposes
         # and to set the magnetic moments of the atoms objeect
         if self.list_params['Hubbard_U'] is None:
@@ -797,15 +802,15 @@ class Espresso(Calculator):
         self.list_params['Hubbard_alpha'] = Hubbard_alpha
 
         return
-        
+
     def read_output(self, outfile=None):
         """The purpose of this function is to read the output assign information
         from that output to the calculator object. We will read the entire output
         file once, assigning varibles when we find them."""
-        
+
         # First, define the functions that will read an individual line and see
         # If there's anything useful there
-        
+
         def read_energy(line):
             if line.lower().startswith('!    total energy'):
                 energy_free = float(line.split()[-2])
@@ -866,7 +871,7 @@ class Espresso(Calculator):
             new_cell = []
             if line.lower().startswith('cell_parameters'):
                 alat = float(line.split()[-1].translate(None, '()')) * 0.529177249
-                for j in range(1, 4):                    
+                for j in range(1, 4):
                     lat = np.array((float(lines[i + j].split()[0]) * alat,
                                     float(lines[i + j].split()[1]) * alat,
                                     float(lines[i + j].split()[2]) * alat))
@@ -874,7 +879,7 @@ class Espresso(Calculator):
                 return new_cell
             else:
                 return None
-                
+
         def read_positions(i, line, lines):
             if line.lower().startswith('atomic_positions'):
                 new_pos = []
@@ -887,7 +892,7 @@ class Espresso(Calculator):
                     j += 1
                 return new_pos
             return None
-            
+
         def read_scf_steps(i, line):
             if line.lower().startswith('     convergence has'):
                 steps = int(line.split()[-2])
@@ -913,8 +918,8 @@ class Espresso(Calculator):
             if line.lower().startswith('     the fermi energy'):
                 fermi = float(line.split()[-2])
                 return fermi
-            return None    
-            
+            return None
+
         if outfile == None:
             if isfile(self.filename + '.out'):
                 out_file = open(self.filename + '.out', 'r')
@@ -967,7 +972,7 @@ class Espresso(Calculator):
             if not cell == None:
                 self.all_cells.append(cell)
                 self.atoms.set_cell(cell)
-            
+
             scaled_pos = read_positions(i, line, lines)
             if not scaled_pos == None:
                 pos = np.dot(scaled_pos, self.atoms.get_cell())
@@ -989,22 +994,22 @@ class Espresso(Calculator):
             fermi = read_fermi_level(line)
             if not fermi == None:
                 self.fermi = fermi
-            
-        
+
+
         # In the off chance that the calculation fails in the last
         # electronic convergence in a relaxation, espresso.py will
         # think its converged
         if self.calc_finished == False:
             self.converged = False
 
-        # self.all_pos and self.all_cells are used for making the 
-        # trajectory file. 
+        # self.all_pos and self.all_cells are used for making the
+        # trajectory file.
         self.all_pos.pop()
         if len(self.all_cells) > 1:
             self.all_cells.pop()
         out_file.close()
-        
-        return 
+
+        return
 
     def get_atoms(self):
         atoms = self.atoms.copy()
@@ -1022,7 +1027,7 @@ class Espresso(Calculator):
 
     def get_diago_thr_init(self):
         return self.diago_thr_init
-        
+
     def get_potential_energy(self, atoms=None, force=False):
         if atoms == None:
             atoms = self.get_atoms()
@@ -1045,7 +1050,7 @@ class Espresso(Calculator):
         if atoms == None:
             atoms = self.get_atoms()
         self.update()
-        return self.fermi        
+        return self.fermi
 
     def check_calc_complete(self, filename=None):
         '''Mainly used for a quick check for linear response calculations'''

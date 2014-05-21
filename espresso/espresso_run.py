@@ -33,15 +33,14 @@ def run(self, series=False):
     # Now add pieces to the script depending on whether we need to
     # pick the processor or the memory
     if self.run_params['processor'] == None:
-        script += '#PBS -l nodes={0:d}:ppn={1:d}\n'.format(self.run_params['nodes'],
-                                                           self.run_params['ppn'])
+        script += '#PBS -l nodes={0:d}\n'.format(self.run_params['nodes'])
     else:
         script += '#PBS -l nodes={0:d}:ppn={1:d}:{2}\n'.format(self.run_params['nodes'],
                                                                self.run_params['ppn'],
                                                                self.run_params['processor'])
-        
-    if self.run_params['mem'] != None:
-        script += '#PBS -l mem={0}\n'.format(self.run_params['mem'])
+
+        #    if self.run_params['mem'] != None:
+        # script += '#PBS -l mem={0}\n'.format(self.run_params['mem'])
 
 
     # Now add the parts of the script for running calculations
@@ -51,9 +50,9 @@ def run(self, series=False):
         runscript = '{0} < {1} | tee {2}\n'
         script += runscript.format(self.run_params['executable'], in_file, out_file)
     else:
-        runscript = 'mpirun -np {0:d} {1} -inp {2} -npool {3} | tee {4}\n'
+        runscript = 'aprun -np {0:d} {1} -inp {2} -npool {3} | tee {4}\n'
         script += runscript.format(np, self.run_params['executable'],
-                                   in_file, self.run_params['pools'], out_file)                                   
+                                   in_file, self.run_params['pools'], out_file)
 
     # If we want to perform a density of states calculation, we need
     # more runscripts
@@ -65,7 +64,7 @@ def run(self, series=False):
             rundos = 'projwfc.x < {0} | tee {1}\n'
             script += rundos.format(in_dos_filename, out_dos_filename)
         else:
-            rundos = 'mpirun -np {0:d} projwfc.x -inp {1} | tee {2}\n'
+            rundos = 'aprun -np {0:d} projwfc.x -inp {1} | tee {2}\n'
             script += rundos.format(np, in_dos_filename, out_dos_filename)
 
     if self.string_params['disk_io'] == 'none':
@@ -90,7 +89,7 @@ def run(self, series=False):
     if series == False:
         raise EspressoSubmitted(out)
     else:
-        return    
+        return
 
 Espresso.run = run
 
@@ -148,7 +147,7 @@ def run_series(name, calcs, walltime='50:00:00', ppn=1, nodes=1, processor=None,
                 job_status = fields[4]
                 if job_status != 'C':
                     return
-                
+
     # Begin writing the script we need to submit to run. If we are restarting from finished
     # initial calculations we need to copy the pwscf file from the previous calculation
 
@@ -165,7 +164,7 @@ def run_series(name, calcs, walltime='50:00:00', ppn=1, nodes=1, processor=None,
         script += '#PBS -l nodes={0:d}:ppn={1:d}\n'.format(nodes, ppn)
     else:
         script += '#PBS -l nodes={0:d}:ppn={1:d}:{2}\n'.format(nodes, ppn, processor)
-        
+
     if mem != None:
         script += '#PBS -l mem={0}\n'.format(mem)
 
@@ -183,10 +182,10 @@ def run_series(name, calcs, walltime='50:00:00', ppn=1, nodes=1, processor=None,
         update_atoms = ''
 
     np = nodes * ppn
-        
+
     # The beginning of the code will be different depending on whether we need a restart
     if len(done_dirs) == 0:
-        if (ppn == 1 and nodes == 1):            
+        if (ppn == 1 and nodes == 1):
             script += '''cd {0}
 {1} < {2}.in | tee {2}.out
 \n'''.format(dirs[0], executables[0], names[0])
@@ -202,7 +201,7 @@ mpirun -np {1} {2} -inp {3}.in -npool {4} | tee {3}.out
 {5}
 cd {2}
 {3} < {4}.in | tee {4}.out
-\n'''.format(done_dirs[-1], move, dirs[0], executables[0], 
+\n'''.format(done_dirs[-1], move, dirs[0], executables[0],
              names[0], update_atoms.format(dirs[0]))
         else:
             script += '''cd {0}
@@ -210,11 +209,11 @@ cd {2}
 {7}
 cd {2}
 mpirun -np {3} {4} -inp {5}.in -npool {6} | tee {5}.out
-\n'''.format(done_dirs[-1], move, dirs[0], np, executables[0], 
+\n'''.format(done_dirs[-1], move, dirs[0], np, executables[0],
              names[0], pools, update_atoms.format(dirs[0]))
-            
+
     # Now do the rest of the calculations
-    if (ppn == 1 and nodes == 1):                    
+    if (ppn == 1 and nodes == 1):
         for d, n, r in zip(dirs[1:], names[1:], executables[1:]):
             script +='''{0} pwscf.atwfc* pwscf.satwfc1* pwscf.wfc* pwscf.occup pwscf.igk* pwscf.save {1}
 {4}
@@ -229,12 +228,12 @@ cd {1}
 cd {1}
 mpirun -np {2} {3} -inp {4}.in -npool {5} | tee {4}.out
 \n'''.format(move, d, np, r, n, pools, update_atoms.format(d))
-        
+
     if test == False:
         run_file = open(filename + '.run', 'w')
         run_file.write(script)
         run_file.close()
-    
+
         p = Popen(['qsub', filename + '.run'], stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
 
@@ -244,10 +243,10 @@ mpirun -np {2} {3} -inp {4}.in -npool {5} | tee {4}.out
         f = open('jobid', 'w')
         f.write(out)
         f.close()
-    
+
     else:
         print script
 
     os.chdir(cwd)
 
-    return 
+    return
