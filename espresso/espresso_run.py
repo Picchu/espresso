@@ -51,7 +51,7 @@ def run(self, series=False):
         runscript = '{0} < {1} | tee {2}\n'
         script += runscript.format(self.run_params['executable'], in_file, out_file)
     else:
-        runscript = 'aprun -np {0:d} {1} -inp {2} -npool {3} | tee {4}\n'
+        runscript = 'aprun -n {0:d} {1} -inp {2} -npool {3} | tee {4}\n'
         script += runscript.format(np, self.run_params['executable'],
                                    in_file, self.run_params['pools'], out_file)
 
@@ -65,7 +65,7 @@ def run(self, series=False):
             rundos = 'projwfc.x < {0} | tee {1}\n'
             script += rundos.format(in_dos_filename, out_dos_filename)
         else:
-            rundos = 'aprun -np {0:d} projwfc.x -inp {1} | tee {2}\n'
+            rundos = 'aprun -n {0:d} projwfc.x -inp {1} | tee {2}\n'
             script += rundos.format(np, in_dos_filename, out_dos_filename)
 
     if self.string_params['disk_io'] == 'none':
