@@ -849,6 +849,7 @@ class Espresso(Calculator):
             This function returns a list of band energies.
             '''
             if 'bands (ev)' in line.lower():
+                bands = []
                 j = i+2
                 while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower() and 'highest' not in lines[j].lower()):
                         bands+= [float(band) for band in lines[j].split()]
@@ -1016,11 +1017,11 @@ class Espresso(Calculator):
             if not fermi == None:
                 self.fermi = fermi
 
-            bands = read_bands(line)
+            bands = read_bands(i, line, lines)
             if not bands == None:
                 self.all_bands += bands
 
-            band_gap = read_band_gap(line):
+            band_gap = read_band_gap(line)
             if not band_gap == None:
                 self.band_gap = band_gap
 
