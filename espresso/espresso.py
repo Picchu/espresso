@@ -959,6 +959,7 @@ class Espresso(Calculator):
         self.all_pos.append(self.atoms.get_positions())
         self.steps = []
         self.all_bands = []
+        self.band_gap = None
         for i, line in enumerate(lines):
             energy_free = read_energy(line)
             if not energy_free == None:
