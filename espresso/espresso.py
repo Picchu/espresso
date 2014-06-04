@@ -851,7 +851,7 @@ class Espresso(Calculator):
             if 'bands (ev)' in line.lower():
                 bands = []
                 j = i+2
-                while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower() and 'highest' not in lines[j].lower()):
+                while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower() and 'highest' not in lines[j].lower() and 'spin' not in lines[j].lower()):
                         bands+= [float(band) for band in lines[j].split()]
                         j+=1
                 return bands
