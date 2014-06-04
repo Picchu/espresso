@@ -851,10 +851,27 @@ class Espresso(Calculator):
             if 'bands (ev)' in line.lower():
                 bands = []
                 j = i+2
-                while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower() and 'highest' not in lines[j].lower() and 'spin' not in lines[j].lower()):
+                while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower()
+                       and 'highest' not in lines[j].lower() and 'spin' not in lines[j].lower()
+                       and 'occupation' not in lines[j].lower()):
                         bands+= [float(band) for band in lines[j].split()]
                         j+=1
                 return bands
+            return None
+
+        def read_occupations(i, line, lines):
+            '''
+            This function returns a list of band occupancies
+            '''
+            if 'occupation numbers' in line.lower():
+                occupations = []
+                j = i+1
+                while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower()
+                       and 'highest' not in lines[j].lower() and 'spin' not in lines[j].lower()
+                       and 'occupation' not in lines[j].lower()):
+                        occupations+= [float(occ) for occ in lines[j].split()]
+                        j+=1
+                return occupations
             return None
 
         def read_electronic_convergence(line):
@@ -959,6 +976,7 @@ class Espresso(Calculator):
         self.all_pos.append(self.atoms.get_positions())
         self.steps = []
         self.all_bands = []
+        self.all_occupations = []
         self.band_gap = None
         for i, line in enumerate(lines):
             energy_free = read_energy(line)
@@ -1021,6 +1039,11 @@ class Espresso(Calculator):
             bands = read_bands(i, line, lines)
             if not bands == None:
                 self.all_bands += bands
+
+            if self.string_params['verbosity'] == 'high':
+                occupations = read_occupations(i, line, lines)
+                if not occupations == None:
+                    self.all_occupations += occupations
 
             band_gap = read_band_gap(line)
             if not band_gap == None:
@@ -1088,7 +1111,28 @@ class Espresso(Calculator):
         self.update()
         return self.all_bands
 
-    def get_band_gap(self, atoms = None):
+    def get_all_occupations(self, atoms = None):
+        if self.string_params['verbosity'] == 'high':
+            if atoms == None:
+                atoms = self.get_atoms()
+                self.update()
+                return self.all_occupations
+        return None
+
+    def get_bands_and_occu(self, atoms = None):
+        '''
+        Returns a sorted list of all band energies and band occupations
+        '''
+        if self.string_params['verbosity'] == 'high':
+
+            if atoms == None:
+                atoms = self.get_atoms()
+                self.update()
+                bands_and_occu = sorted(zip(self.get_all_bands(), self.get_all_occupations()))
+                return bands_and_occu
+        return None
+
+    def get_band_gap(self, atoms = None, err = 0.1):
         if atoms == None:
             atoms = self.get_atoms()
         self.update()
@@ -1096,8 +1140,46 @@ class Espresso(Calculator):
         if self.band_gap == None:
             fermi = self.get_fermi_level()
             all_bands = self.get_all_bands()
-            bands = sorted(list(set(all_bands)))
-            band_gap = find_ge(bands, fermi) - find_lt(bands, fermi)
+            bands = sorted(list((all_bands)))
+
+            # If not verbose, then we have to trust that these values are accurate
+            gt = find_gt(bands, fermi)
+            lt = find_lt(bands, fermi)
+
+            # Sometimes the fermi level might intersect an occupied band lead to an incorrect result
+            # We can only check this by setting high verbosity and testing if the above results are correct
+            if self.string_params['verbosity'] == 'high':
+                bands_and_occu = self.get_bands_and_occu()
+                i_gt = index(bands, gt)
+                i_lt = index(bands, lt)
+                correct = False
+
+                while not correct:
+                    occ_gt = bands_and_occu[i_gt][1]
+                    occ_lt = bands_and_occu[i_lt][1]
+
+
+                    if occ_gt < err:
+                        i_gt-=1
+                        if i_gt < 0:
+                            return None
+                        gt = bands[i_gt]
+                        correct_gt = False
+                    else:
+                        correct_gt = True
+
+                    if occ_lt > err:
+                        i_lt+=1
+                        if i_lt == len(bands):
+                            return None
+                        lt = bands[i_lt]
+                        correct_lt = False
+                    else:
+                        correct_lt = True
+
+                    correct = correct_lt and correct_gt
+
+            band_gap = lt - gt
             self.band_gap = band_gap
         return self.band_gap
 
