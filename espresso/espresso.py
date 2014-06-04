@@ -11,8 +11,8 @@ from string import digits, ascii_letters
 from os.path import join, isfile, islink, isdir
 from collections import Iterable
 from subprocess import Popen, PIPE, call
-
 import numpy as np
+from sort import *
 
 import ase
 from ase.calculators.general import Calculator
@@ -844,6 +844,18 @@ class Espresso(Calculator):
 
             return None
 
+        def read_bands(i, line, lines):
+            '''
+            This function returns a list of band energies.
+            '''
+            if 'bands (ev)' in line.lower():
+                j = i+2
+                while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower() and 'highest' not in lines[j].lower()):
+                        bands+= [float(band) for band in lines[j].split()]
+                        j+=1
+                return bands
+            return None
+
         def read_electronic_convergence(line):
             if line.lower().startswith('     convergence not achieved'):
                 return False
@@ -920,6 +932,14 @@ class Espresso(Calculator):
                 return fermi
             return None
 
+        def read_band_gap(line):
+            if ' highest occupied, lowest unoccupied level' in line.lower():
+                h = float(line.split()[-2])
+                l = float(line.split()[-1])
+                band_gap = l - h
+                return band_gap
+            return None
+
         if outfile == None:
             if isfile(self.filename + '.out'):
                 out_file = open(self.filename + '.out', 'r')
@@ -937,6 +957,7 @@ class Espresso(Calculator):
         self.all_cells.append(self.atoms.get_cell())
         self.all_pos.append(self.atoms.get_positions())
         self.steps = []
+        self.all_bands = []
         for i, line in enumerate(lines):
             energy_free = read_energy(line)
             if not energy_free == None:
@@ -995,6 +1016,13 @@ class Espresso(Calculator):
             if not fermi == None:
                 self.fermi = fermi
 
+            bands = read_bands(line)
+            if not bands == None:
+                self.all_bands += bands
+
+            band_gap = read_band_gap(line):
+            if not band_gap == None:
+                self.band_gap = band_gap
 
         # In the off chance that the calculation fails in the last
         # electronic convergence in a relaxation, espresso.py will
@@ -1051,6 +1079,25 @@ class Espresso(Calculator):
             atoms = self.get_atoms()
         self.update()
         return self.fermi
+
+    def get_all_bands(self, atoms=None):
+        if atoms == None:
+            atoms = self.get_atoms()
+        self.update()
+        return self.all_bands
+
+    def get_band_gap(self, atoms = None):
+        if atoms == None:
+            atoms = self.get_atoms()
+        self.update()
+
+        if self.band_gap == None:
+            fermi = self.get_fermi_level()
+            all_bands = self.get_all_bands()
+            bands = sorted(list(set(all_bands)))
+            band_gap = find_ge(bands, fermi) - find_lt(bands, fermi)
+            self.band_gap = band_gap
+        return self.band_gap
 
     def check_calc_complete(self, filename=None):
         '''Mainly used for a quick check for linear response calculations'''
