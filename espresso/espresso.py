@@ -467,6 +467,48 @@ class Espresso(Calculator):
             #       and fnmatch.fnmatch(ef, self.filename + '*')):
             #     shutil.copy(ef, newdirpath)
 
+
+    def clone_all(self, newdir, force=False, extra_files=[]):
+
+        '''
+        copy all files from an existing calculation to a new directory. different from clone in some ways,
+        which does not copy files not beginning with pwscf. newdir should be relative to the path the calculator was
+        created from, unless the path is absolute.
+        '''
+
+        if os.path.isabs(newdir):
+            newdirpath = newdir
+        else:
+            newdirpath = os.path.join(self.cwd, newdir)
+
+        import shutil
+
+        if not os.path.isdir(newdirpath):
+            os.makedirs(newdirpath)
+
+        for ef in os.listdir('.'):
+            if force == False:
+                if (not os.path.exists(os.path.join(newdirpath, ef))):
+                    if os.path.isfile(ef):
+                        shutil.copy(ef, newdirpath)
+                    elif os.path.isdir(ef):
+                        shutil.copytree(ef, os.path.join(newdirpath, ef))
+            else:
+
+                if os.path.isfile(ef):
+                    shutil.copy(ef, newdirpath)
+                elif os.path.isdir(ef):
+                    try:
+                        shutil.rmtree(os.path.join(newdirpath, ef))
+                    except:
+                        pass
+                    shutil.copytree(ef, os.path.join(newdirpath, ef))
+
+
+
+
+
+
     def calculation_required(self, atoms=None, property=None, force=False):
         if (self.converged == False):
             return True
@@ -1158,19 +1200,18 @@ class Espresso(Calculator):
                     occ_gt = bands_and_occu[i_gt][1]
                     occ_lt = bands_and_occu[i_lt][1]
 
-
-                    if occ_gt < err:
-                        i_gt-=1
-                        if i_gt < 0:
+                    if occ_gt > err:
+                        i_gt+=1
+                        if i_gt == len(bands):
                             return None
                         gt = bands[i_gt]
                         correct_gt = False
                     else:
                         correct_gt = True
 
-                    if occ_lt > err:
-                        i_lt+=1
-                        if i_lt == len(bands):
+                    if occ_lt < err:
+                        i_lt-=1
+                        if i_lt < 0:
                             return None
                         lt = bands[i_lt]
                         correct_lt = False
@@ -1179,7 +1220,8 @@ class Espresso(Calculator):
 
                     correct = correct_lt and correct_gt
 
-            band_gap = lt - gt
+            band_gap = gt - lt
+
             self.band_gap = band_gap
         return self.band_gap
 

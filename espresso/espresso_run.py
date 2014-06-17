@@ -1,6 +1,8 @@
 # Copyright (C) 2013 - Zhongnan Xu
 """This module contains functions for submitting calculations to the queue
 """
+import os
+import numpy as np
 
 from espresso import *
 
@@ -93,6 +95,83 @@ def run(self, series=False):
         return
 
 Espresso.run = run
+
+
+def write_batch_script(filepath, dirs, walltime = '12:00:00', ppn =16, nodes = 1, pools=1, name = 'batch'):
+
+    # NOTE: This does not currently use pools as it was written for MD jobs which usually use gamma point
+
+    script='''#!/bin/bash
+#PBS -A mat045
+#PBS -N {2}
+#PBS -j oe
+#PBS -l walltime={0}
+#PBS -l nodes={1}
+
+cd $PBS_O_WORKDIR
+'''.format(walltime, nodes, name)
+
+
+    # processors available
+    proc = nodes * ppn
+
+    # Nodes per job
+
+    np_job = int(proc / len(dirs))
+
+    for dir in dirs:
+        fulldir = os.path.abspath(os.path.expanduser(dir))
+        script+= 'cd {0}\n'.format(fulldir)
+        script+='aprun -n {0} $PW_EOS < pwscf.in > pwscf.out &\n'.format(np_job)
+
+    script+='wait\n'
+
+
+    f = open(filepath, 'w')
+    f.write(script)
+    f.close()
+
+
+def run_batch(filepath):
+        path, filename = (filepath.rsplit('/',1))
+        cwd = os.getcwd()
+        os.chdir(path)
+        p = Popen(['qsub', filename], stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+
+        if out == '' or err !='':
+            raise Exception('something went wrong in qsub:\n\n{0}'.format(err))
+
+        f = open('jobid', 'w')
+        f.write(out)
+        f.close()
+        os.chdir(cwd)
+        return out.strip()
+
+def job_in_queue(jobid='jobid'):
+    '''return True or False if the directory has a job in the queue'''
+    if not os.path.exists(jobid):
+        return False
+    else:
+        # get the jobid
+        jobid = open(jobid).readline().strip()
+
+        # see if jobid is in queue
+        jobids_in_queue = commands.getoutput('qselect').split('\n')
+        if jobid in jobids_in_queue:
+            # get details on specific jobid
+            status, output = commands.getstatusoutput('qstat %s' % jobid)
+            if status == 0:
+                lines = output.split('\n')
+                fields = lines[2].split()
+                job_status = fields[4]
+                if job_status == 'C':
+                    return False
+                else:
+                    return True
+        else:
+            return False
+
 
 def run_series(name, calcs, walltime='50:00:00', ppn=1, nodes=1, processor=None, mem=None,
                pools=1, save=True, test=False, update_pos=False):
