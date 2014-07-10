@@ -298,6 +298,8 @@ class Espresso(Calculator):
 
         # Set nbands automatically if not set manually. We want to override the
         # default, which is 1.2 * the number of electrons. We want 1.5 times
+
+        # Prateek: I probably need to set this back to the default, more bands = more simulation time!
         nbands = 0
         for atom in self.atoms:
             nbands += self.PPs[atom.symbol][1]
@@ -434,6 +436,8 @@ class Espresso(Calculator):
         was created from, not the current working directory, unless an absolute
         path is used.'''
 
+        # Prateek: This will not copy things in outdir for prefixes other than pwscf.
+        # It is advised to use clone_all
         if os.path.isabs(newdir):
             newdirpath = newdir
         else:
@@ -886,25 +890,30 @@ class Espresso(Calculator):
 
             return None
 
-        def read_bands(i, line, lines):
-            '''
-            This function returns a list of band energies.
-            '''
+            # Prateek: I wrote the next two functions to read bands and occupations
+            # it sometimes gives a value error, not a big priority, commenting out for now
+
+            '''def read_bands(i, line, lines):
+            
+            #This function returns a list of band energies.
+            
+            # Prateek: This needs to be tested for different cases
             if 'bands (ev)' in line.lower():
                 bands = []
                 j = i+2
                 while ('fermi' not in lines[j].lower() and 'bands (ev)' not in lines[j].lower()
                        and 'highest' not in lines[j].lower() and 'spin' not in lines[j].lower()
                        and 'occupation' not in lines[j].lower()):
+                        # This will sometimes give a ValueError: invalid literal for float(): -110.9967-110.9950-110.9911-110.9781
                         bands+= [float(band) for band in lines[j].split()]
                         j+=1
                 return bands
             return None
 
         def read_occupations(i, line, lines):
-            '''
-            This function returns a list of band occupancies
-            '''
+            
+           # This function returns a list of band occupancies
+            
             if 'occupation numbers' in line.lower():
                 occupations = []
                 j = i+1
@@ -915,7 +924,7 @@ class Espresso(Calculator):
                         j+=1
                 return occupations
             return None
-
+        '''
         def read_electronic_convergence(line):
             if line.lower().startswith('     convergence not achieved'):
                 return False
@@ -991,7 +1000,7 @@ class Espresso(Calculator):
                 fermi = float(line.split()[-2])
                 return fermi
             return None
-
+            
         def read_band_gap(line):
             if ' highest occupied, lowest unoccupied level' in line.lower():
                 h = float(line.split()[-2])
@@ -1078,6 +1087,8 @@ class Espresso(Calculator):
             if not fermi == None:
                 self.fermi = fermi
 
+            # Prateek: commenting out the next two bits of code for now
+            '''
             bands = read_bands(i, line, lines)
             if not bands == None:
                 self.all_bands += bands
@@ -1086,7 +1097,7 @@ class Espresso(Calculator):
                 occupations = read_occupations(i, line, lines)
                 if not occupations == None:
                     self.all_occupations += occupations
-
+            '''
             band_gap = read_band_gap(line)
             if not band_gap == None:
                 self.band_gap = band_gap
@@ -1175,6 +1186,7 @@ class Espresso(Calculator):
         return None
 
     def get_band_gap(self, atoms = None, err = 0.1):
+        
         if atoms == None:
             atoms = self.get_atoms()
         self.update()

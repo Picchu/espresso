@@ -58,7 +58,9 @@ def run(self, series=False):
                                    in_file, self.run_params['pools'], out_file)
 
     # If we want to perform a density of states calculation, we need
-    # more runscripts
+    # more runscripts.
+
+    # This will probably need to be changed to run DOS on Titan/EOS
     if self.run_params['dos'] == True:
         self.write_dos_input()
         in_dos_filename = self.filename + '.dos.in'
@@ -97,8 +99,13 @@ def run(self, series=False):
 Espresso.run = run
 
 
-def write_batch_script(filepath, dirs, walltime = '12:00:00', ppn =16, nodes = 1, pools=1, name = 'batch'):
+def write_batch_script(filepath, dirs, walltime = '12:00:00', ppn =16, nodes = 1, pools=1, name = 'batch', machine = 'eos'):
 
+
+    '''
+    This is a function that writes a batched script for the ORNL machines, eos or titan.
+    '''
+    
     # NOTE: This does not currently use pools as it was written for MD jobs which usually use gamma point
 
     script='''#!/bin/bash
@@ -119,10 +126,21 @@ cd $PBS_O_WORKDIR
 
     np_job = int(proc / len(dirs))
 
+    if machine == 'titan':
+        exe = '$PW_EXEC'
+
+    elif machine == 'eos':
+        exe = '$PW_EOS'
+
+    else:
+        raise MachineNotFound, 'Please enter either titan or eos as your machine name'
+
+     
+    
     for dir in dirs:
         fulldir = os.path.abspath(os.path.expanduser(dir))
         script+= 'cd {0}\n'.format(fulldir)
-        script+='aprun -n {0} $PW_EOS < pwscf.in > pwscf.out &\n'.format(np_job)
+        script+='aprun -n {0} {1} < pwscf.in > pwscf.out &\n'.format(np_job, exe)
 
     script+='wait\n'
 
