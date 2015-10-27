@@ -396,7 +396,6 @@ rm -fr alpha_{0}/pwscf.*
     run_file.write(script)
     run_file.close()
 
-    # Now just submit the calculations
     p = Popen(['qsub', run_file_name], stdout=PIPE, stderr=PIPE)
 
     out, err = p.communicate(script)

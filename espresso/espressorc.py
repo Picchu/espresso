@@ -2,5 +2,5 @@
 """This module contains the computer specific variables
 """
 
-ESPRESSORC = {'executable':'/home-research/zhongnanxu/opt/espresso-5.0.2-ifort-internal-lapack/bin/pw.x',
-              'PPpath': '/home-research/zhongnanxu/gbrv_espresso_pseudo'}
+ESPRESSORC = {'executable':'/Users/Picchu/Documents/PhD/QEspresso/espresso-5.1.2/bin/pw.x',
+              'PPpath': '/Users/Picchu/Documents/PhD/QEspresso/espresso-5.1.2/pseudo_ok'}

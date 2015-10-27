@@ -24,28 +24,29 @@ def run(self, series=False):
     np = self.run_params['nodes'] * self.run_params['ppn']
 
     # Start the run script
-    script = '''#!/bin/bash
+#    script = '''#!/bin/bash
 #PBS -l walltime={0}
 #PBS -j oe
 #PBS -N {1}
-'''.format(self.run_params['walltime'], self.run_params['jobname'])
+#'''.format(self.run_params['walltime'], self.run_params['jobname'])
+    script = '#!/bin/bash\n'
 
     # Now add pieces to the script depending on whether we need to
     # pick the processor or the memory
-    if self.run_params['processor'] == None:
-        script += '#PBS -l nodes={0:d}:ppn={1:d}\n'.format(self.run_params['nodes'],
-                                                           self.run_params['ppn'])
-    else:
-        script += '#PBS -l nodes={0:d}:ppn={1:d}:{2}\n'.format(self.run_params['nodes'],
-                                                               self.run_params['ppn'],
-                                                               self.run_params['processor'])
+    #if self.run_params['processor'] == None:
+    #    script += '#PBS -l nodes={0:d}:ppn={1:d}\n'.format(self.run_params['nodes'],
+    #                                                       self.run_params['ppn'])
+    #else:
+    #    script += '#PBS -l nodes={0:d}:ppn={1:d}:{2}\n'.format(self.run_params['nodes'],
+    #                                                           self.run_params['ppn'],
+    #                                                           self.run_params['processor'])
         
-    if self.run_params['mem'] != None:
-        script += '#PBS -l mem={0}\n'.format(self.run_params['mem'])
+    #if self.run_params['mem'] != None:
+    #    script += '#PBS -l mem={0}\n'.format(self.run_params['mem'])
 
 
     # Now add the parts of the script for running calculations
-    script += '\ncd $PBS_O_WORKDIR\n'
+    #script += '\ncd $PBS_O_WORKDIR\n'
 
     if np == 1:
         runscript = '{0} < {1} | tee {2}\n'
@@ -77,7 +78,7 @@ def run(self, series=False):
     run_file.write(script)
     run_file.close()
 
-    p = Popen(['qsub', run_file_name], stdout=PIPE, stderr=PIPE)
+    p = Popen(['sh', run_file_name], stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
 
     if out == '' or err !='':

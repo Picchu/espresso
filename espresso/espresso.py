@@ -117,7 +117,8 @@ class Espresso(Calculator):
 
     PPs = ESPRESSO_PPs
     
-    def __init__(self, espressodir=None, **kwargs):
+    # agreco: modified to allow input filename upon initialization
+    def __init__(self, espressodir=None, filename='pwscf', **kwargs):
         
         if espressodir == None:
             self.espressodir = os.getcwd()
@@ -127,7 +128,8 @@ class Espresso(Calculator):
         self.cwd = os.getcwd()
         self.kwargs = kwargs
         if espressodir == None:
-            self.initialize(**self.kwargs)
+	    # modified to accept input filename
+            self.initialize(filename=filename, **self.kwargs)
 
         return
 
@@ -154,8 +156,9 @@ class Espresso(Calculator):
         os.chdir(self.cwd)
 
         return
-        
-    def initialize(self, atoms=None, **kwargs):        
+    
+    # agreco: modified to accept a filename as input
+    def initialize(self, atoms=None, filename='pwscf', **kwargs):        
         '''We need an extra initialize since a lot of the things we need to do
         can only be done once we're inside the directory, which happens after
         the initial __init__'''
@@ -166,7 +169,8 @@ class Espresso(Calculator):
         self.atoms = atoms
         self.original_atoms = atoms
         self.old_filename = os.path.basename(self.espressodir) # For old version of espresso that used this filename
-        self.filename = 'pwscf'
+	# agreco: modified to accept an input filename
+        self.filename = filename
         self.name = 'QuantumEspresso'        
         self.real_params = {}
         self.string_params = {}
@@ -738,7 +742,8 @@ class Espresso(Calculator):
             data = line.split()
             key = data[0]
             if key in real_keys:
-                self.real_params[key] = float(data[2])
+		# agreco: allow use of scientific notation
+                self.real_params[key] = float(data[2].replace('d','E').replace('D','E'))
             elif key in string_keys:
                 self.string_params[key] = str(data[2].translate(None, ("'")))
             elif key in int_keys:
@@ -752,7 +757,8 @@ class Espresso(Calculator):
             elif key[:-3] in list_keys:
                 if self.list_params[key[:-3]] == None:
                     self.list_params[key[:-3]] = []
-                self.list_params[key[:-3]].append(float(data[2]))
+		# agreco: allow use of scientific notation
+                self.list_params[key[:-3]].append(float(data[2].replace('d','E').replace('D','E')))
             # The starting_ns_eigenvalue key is a unique problem
             elif key[:22] == 'starting_ns_eigenvalue':
                 if self.list_params['starting_ns_eigenvalue'] == None:
@@ -801,7 +807,7 @@ class Espresso(Calculator):
     def read_output(self, outfile=None):
         """The purpose of this function is to read the output assign information
         from that output to the calculator object. We will read the entire output
-        file once, assigning varibles when we find them."""
+        file once, assigning variables when we find them."""
         
         # First, define the functions that will read an individual line and see
         # If there's anything useful there
@@ -865,7 +871,9 @@ class Espresso(Calculator):
         def read_cell(i, line, lines):
             new_cell = []
             if line.lower().startswith('cell_parameters'):
-                alat = float(line.split()[-1].translate(None, '()')) * 0.529177249
+		# agreco: modified for different format of QE 5.1.2
+                #alat = float(line.split()[-1].translate(None, '()')) * 0.529177249
+		alat = 1.0
                 for j in range(1, 4):                    
                     lat = np.array((float(lines[i + j].split()[0]) * alat,
                                     float(lines[i + j].split()[1]) * alat,
@@ -999,7 +1007,11 @@ class Espresso(Calculator):
 
         # self.all_pos and self.all_cells are used for making the 
         # trajectory file. 
-        self.all_pos.pop()
+	# agreco: modified to ensure we always have at least one 
+	# structure in the trajectory 
+	if len(self.all_pos) > 1:
+            self.all_pos.pop()
+
         if len(self.all_cells) > 1:
             self.all_cells.pop()
         out_file.close()
