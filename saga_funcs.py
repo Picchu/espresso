@@ -65,6 +65,13 @@ def get_js(username, host, js_type):
         raise Exception("Job Service type not recognized")
 
 def create_dir(username, host, type, dir_path):
+    """
+    This function checks if a directory already exists. If not, it creates
+    it: works both for local and remote directories.
+    :param: username and hostname in case of remote directory.
+    Type can be either 'local' or 'remote'. dir_path is the full path
+    of the directory.
+    """
     # check if directory already exists
     def exists_dir(type):
         if type == 'local':
@@ -101,6 +108,46 @@ def create_dir(username, host, type, dir_path):
             print "An exception occurred: (%s) %s " % (ex.type, (str(ex)))
             print " \n *** Backtrace:\n %s" % ex.traceback
             return
+
+def copy_file(username, host, source, localdir, remotedir, filename):
+    """
+    This function copies a file between a local and remote destinations.
+    :param: username and hostname of the remote cluster, source can be
+    either 'local' or 'remote' and specifies where the file is copied from.
+    localdir and remotedir are the full paths of the 2 directories, while
+    filename is the name of the file (and not the path)
+    """
+    try:
+        s = get_session(username)
+
+        workdir = saga.filesystem.Directory("sftp://"+host+remotedir, session=s)
+
+        if source == 'remote':
+            file_path = "sftp://"+host+remotedir + '/' + filename
+        elif source == 'local':
+            file_path = "file://localhost" + localdir + '/' + filename
+        else:
+            raise Exception("Source option not recognized")
+
+        file_saga = saga.filesystem.File(file_path, session=s)
+
+        if source == 'remote':
+            workdir.copy(file_saga.get_url(), "file://localhost" + localdir)
+        elif source == 'local':
+            file_saga.copy(workdir.get_url())
+        else:
+            raise Exception("Source option not recognized")
+
+        file_saga.close()
+        workdir.close()
+
+        return
+
+    except saga.SagaException, ex:
+        print "An exception occurred: (%s) %s " % (ex.type, (str(ex)))
+        print " \n *** Backtrace:\n %s" % ex.traceback
+        return
+
 
 # general function for a saga job
 def run_job_saga(username, host, js_type, executable,
