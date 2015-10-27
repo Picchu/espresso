@@ -1,5 +1,5 @@
 
-import saga
+import saga, os, subprocess, pipes
 
 # we use a single job service per type
 # this is recommended anyway in the saga
@@ -63,6 +63,44 @@ def get_js(username, host, js_type):
 
     else:
         raise Exception("Job Service type not recognized")
+
+def create_dir(username, host, type, dir_path):
+    # check if directory already exists
+    def exists_dir(type):
+        if type == 'local':
+            return os.path.isdir(dir_path)
+        elif type == 'remote':
+            proc = subprocess.Popen(['ssh', '%s@%s' % (username, host),
+                'test -d %s' % pipes.quote(dir_path)])
+            proc.wait()
+            return proc.returncode == 0
+        else:
+            raise Exception('Environment type not recognized')
+
+    if type=='local':
+        if exists_dir(type) == False:
+            os.makedirs(dir_path)
+
+        return
+
+    elif type=='remote':
+        try:
+            s = get_session(username)
+            basedir = saga.filesystem.Directory("sftp://"+host+"/", session=s)
+
+            if exists_dir(type) == False:
+                if dir_path.startswith('/'):
+                    dir_path = dir_path[1:]
+                basedir.make_dir(dir_path)
+
+            basedir.close()
+
+            return
+
+        except saga.SagaException, ex:
+            print "An exception occurred: (%s) %s " % (ex.type, (str(ex)))
+            print " \n *** Backtrace:\n %s" % ex.traceback
+            return
 
 # general function for a saga job
 def run_job_saga(username, host, js_type, executable,
